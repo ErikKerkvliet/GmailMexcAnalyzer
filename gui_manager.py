@@ -16,7 +16,7 @@ class TradeManagerApp:
 
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("Helvetica", 10, "bold"))
-        # NIEUW: Stijl voor de statusmelding
+        # Stijl voor de statusmelding
         style.configure("Status.TLabel", foreground="red", font=("Helvetica", 12))
 
         # Stijl voor afwisselende rij kleuren en kolom separators
@@ -42,7 +42,7 @@ class TradeManagerApp:
         title_label = ttk.Label(top_frame, text="Openstaande trades:", font=("Helvetica", 12))
         title_label.pack(side=tk.LEFT)
 
-        # NIEUW: Een apart label voor de statusmelding
+        # Een apart label voor de statusmelding
         self.status_label = ttk.Label(top_frame, text="", style="Status.TLabel")
         self.status_label.pack(side=tk.LEFT, padx=150)
 
@@ -50,7 +50,6 @@ class TradeManagerApp:
         table_frame = ttk.Frame(root, padding=(10, 0, 10, 10))
         table_frame.pack(fill=tk.BOTH, expand=True)
 
-        # GEWIJZIGD: 'id' is een datakolom, maar wordt niet getoond.
         # De 'columns' tuple bevat alle data die we willen opslaan in een rij.
         self.columns = ('id', 'pair', 'direction', 'trader', 'entry_price', 'open_time')
         # De 'displaycolumns' tuple bepaalt welke kolommen ZICHTBAAR zijn.
@@ -105,7 +104,7 @@ class TradeManagerApp:
         open_trades = self.db_manager.get_open_trades_details()
 
         if not open_trades:
-            # NIEUW: Toon de melding in het statuslabel boven de tabel
+            # Toon de melding in het statuslabel boven de tabel
             self.status_label.config(text="Geen openstaande trades gevonden.")
             return
 

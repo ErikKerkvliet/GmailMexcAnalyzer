@@ -39,7 +39,6 @@ class TraderCooldownManager:
                 data = json.load(f)
                 for item in data:
                     trader = item.get('trader')
-                    # GEWIJZIGD: Zoek nu naar de 'monitor_na' sleutel
                     monitor_delay = item.get('monitor_na')
                     if trader and monitor_delay:
                         delays[trader] = self._parse_duration(monitor_delay)

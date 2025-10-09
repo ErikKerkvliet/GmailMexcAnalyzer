@@ -113,7 +113,7 @@ class Analyze:
         crypto_pair = match.group(1)
         trader = match.group(2)
 
-        # Stap 1: Zoek de ID en de richting van de meest recente openstaande trade die overeenkomt.
+        # Zoek de ID en de richting van de meest recente openstaande trade die overeenkomt.
         self.cursor.execute(
             """
             SELECT id, direction FROM trades
@@ -125,14 +125,14 @@ class Analyze:
         )
         trade_to_close = self.cursor.fetchone()  # Haal één resultaat op
 
-        # Stap 2: Als we een trade hebben gevonden, werk deze dan bij.
+        # Als we een trade hebben gevonden, werk deze dan bij.
         if trade_to_close:
             trade_id, trade_direction = trade_to_close
 
             # Nu gebruiken we de 'direction' voor een duidelijke log-boodschap
             print(f"📉 Positie GESLOTEN: Pair={crypto_pair}, Direction={trade_direction}, Trader={trader}")
 
-            # Stap 3: Werk de specifieke trade bij op basis van zijn unieke ID.
+            # Werk de specifieke trade bij op basis van zijn unieke ID.
             self.cursor.execute(
                 "UPDATE trades SET status = 'CLOSED' WHERE id = ?",
                 (trade_id,)

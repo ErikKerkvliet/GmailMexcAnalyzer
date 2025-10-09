@@ -18,7 +18,7 @@ class LLMDataExtractor:
 
     def extract_trade_data(self, email_body: str) -> dict | None:
         """
-        GEWIJZIGD: Vraagt de LLM nu ook om de entry_price.
+        Vraagt de LLM nu ook om de entry_price.
         """
         prompt = f"""
         Analyseer de volgende e-mailtekst van MEXC. Extraheer de cryptomunt-pair, de richting van de trade (LONG of SHORT), de naam van de trader, en de entry price.
@@ -47,7 +47,7 @@ class LLMDataExtractor:
             content = response.choices[0].message.content
             data = json.loads(content)
 
-            # GEWIJZIGD: Valideer of 'entry_price' ook aanwezig is.
+            # Valideer of 'entry_price' ook aanwezig is.
             if all(key in data for key in ["crypto_pair", "direction", "trader", "entry_price"]):
                 print(f"   -> LLM Succes: Data succesvol geëxtraheerd: {data}")
                 return data

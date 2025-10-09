@@ -31,7 +31,7 @@ def write_current_timestamp():
     current_timestamp = int(time.time())
     with open(TIMESTAMP_FILE, 'w') as f:
         f.write(str(current_timestamp))
-    # AANGEPAST: Print aan het begin van een nieuwe regel voor duidelijkheid
+    # Print aan het begin van een nieuwe regel voor duidelijkheid
     print(f"\nTimestamp {current_timestamp} opgeslagen voor de volgende run.")
 
 def main():
@@ -64,7 +64,6 @@ def main():
         print("Geen nieuwe e-mails gevonden die aan de query voldoen.")
     else:
         print(f"\n{len(new_emails)} ongelezen e-mail(s) gevonden. Verwerken van oud naar nieuw...")
-        # De 'reversed()' loop blijft bestaan.
         for email in reversed(new_emails):
             # Geef de databaseverbinding door vanuit de manager
             analyzer = Analyze(email_data=email, db_connection=db_manager.get_connection())
@@ -114,7 +113,6 @@ def main():
 
             elapsed_time = current_time - trade_timestamp
 
-            # DE KERN VAN DE NIEUWE LOGICA:
             # Controleer ALLEEN als de trade lang genoeg open staat.
             if elapsed_time >= monitor_delay_seconds:
                 # De tijd is verstreken, dus we mogen de stop-loss controleren.

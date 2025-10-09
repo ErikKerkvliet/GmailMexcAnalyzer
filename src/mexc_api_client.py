@@ -20,6 +20,7 @@ class MexcApiClient:
             De huidige prijs als een float, of None als er een fout optreedt.
         """
         # Formatteer het symbool zoals de MEXC API het verwacht (bv. "BERAUSDT")
+        response = None
         symbol = crypto_pair.upper()
         endpoint = "/api/v3/ticker/price"
         url = f"{self.API_BASE_URL}{endpoint}"

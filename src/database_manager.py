@@ -66,6 +66,26 @@ class DatabaseManager:
             print(f"Database error while marking email for trade {trade_id}: {e}")
             return False
 
+    # Add this method to your DatabaseManager class in src/database_manager.py
+    def get_all_trades_details(self) -> list[dict]:
+        """
+        Fetches a list of dictionaries with all details of ALL trades (open and closed).
+        """
+        self.cursor.execute("""
+            SELECT id, crypto_pair, direction, trader, entry_price, open_time, timestamp, mail_send, status
+            FROM trades ORDER BY timestamp DESC
+        """)
+        results = self.cursor.fetchall()
+        return [dict(row) for row in results]
+
+    # Add this method too
+    def get_unique_traders(self) -> list[str]:
+        """Fetches a list of unique trader names from the database."""
+        self.cursor.execute("SELECT DISTINCT trader FROM trades ORDER BY trader")
+        # fetchall() returns a list of tuples, e.g., [('TraderA',), ('TraderB',)]
+        results = self.cursor.fetchall()
+        return [row['trader'] for row in results]
+
     def get_connection(self) -> sqlite3.Connection:
         """Returns the active database connection for use by other classes."""
         return self.conn

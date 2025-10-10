@@ -9,7 +9,7 @@ from src.analyzer import Analyze
 from src.mexc_api_client import MexcApiClient
 from src.position_monitor import PositionMonitor
 from src.database_manager import DatabaseManager
-from src.trader_cooldown_manager import TraderCooldownManager
+from src.trader_config import TraderConfig
 from src.email_notifier import EmailNotifier
 
 DB_FILE = "trades.db"
@@ -92,7 +92,7 @@ def main():
         stop_loss = -100.0
         print("WAARSCHUWING: STOPLOSS_PERCENTAGE in .env is ongeldig.")
 
-    trader_config_manager = TraderCooldownManager(TRADER_CONFIG_FILE)
+    trader_config = TraderConfig(TRADER_CONFIG_FILE)
     open_trades = db_manager.get_open_trades_details()
 
     if not open_trades:
@@ -100,7 +100,7 @@ def main():
     else:
         print(f"{len(open_trades)} openstaande positie(s) gevonden.")
         mexc_client = MexcApiClient()
-        monitor = PositionMonitor(stop_loss_percentage=stop_loss, email_notifier=notifier)
+        monitor = PositionMonitor(stop_loss_percentage=stop_loss, email_notifier=notifier, db_manager=db_manager)
         current_time = int(time.time())
 
         for trade in open_trades:
@@ -108,26 +108,24 @@ def main():
             trade_timestamp = trade['timestamp']
 
             # Haal de monitoring-vertraging op voor deze trader
-            monitor_delay_seconds = trader_config_manager.get_monitor_delay_seconds(trader_name)
-
-            elapsed_time = current_time - trade_timestamp
+            monitor_delay_seconds = trader_config.get_config_wait_time(trader_name)
 
             # Controleer ALLEEN als de trade lang genoeg open staat.
-            if elapsed_time >= monitor_delay_seconds:
+            if current_time > (trade_timestamp + monitor_delay_seconds):
                 # De tijd is verstreken, dus we mogen de stop-loss controleren.
+                elapsed_time = current_time - trade_timestamp
                 print(
                     f"   -> Controle voor {trade['crypto_pair']} ({trader_name}) wordt uitgevoerd (open voor {elapsed_time // 60}m).")
                 current_price = mexc_client.get_current_price(trade['crypto_pair'])
                 if current_price is not None:
                     monitor.check_position(
-                        crypto_pair=trade['crypto_pair'], direction=trade['direction'],
-                        entry_price=trade['entry_price'], current_price=current_price
+                        trade_id=trade['id'],
+                        crypto_pair=trade['crypto_pair'],
+                        direction=trade['direction'],
+                        entry_price=trade['entry_price'],
+                        current_price=current_price,
+                        mail_send=trade['mail_send']
                     )
-            else:
-                # De tijd is nog niet verstreken. Doe niets en log dit.
-                remaining_time = monitor_delay_seconds - elapsed_time
-                print(
-                    f"   -> Monitoring voor {trade['crypto_pair']} ({trader_name}) is uitgesteld. Controle start over: {remaining_time // 60}m {remaining_time % 60}s.")
 
     db_manager.close_connection()
     print("\nProces voltooid. Databaseverbinding gesloten.")

@@ -1,12 +1,12 @@
-# src/trader_cooldown_manager.py
+# src/trader_config.py
 
 import json
 import re
 
 
-class TraderCooldownManager:
+class TraderConfig:
     """
-    Leest en beheert de monitoring-vertraging per trader uit een configuratiebestand.
+    Leest en beheert de configuratie per trader uit een configuratiebestand.
     """
     def __init__(self, config_file: str):
         self.config_file = config_file
@@ -39,10 +39,10 @@ class TraderCooldownManager:
                 data = json.load(f)
                 for item in data:
                     trader = item.get('trader')
-                    monitor_delay = item.get('monitor_na')
+                    monitor_delay = item.get('wachttijd')
                     if trader and monitor_delay:
                         delays[trader] = self._parse_duration(monitor_delay)
-            print("Trader monitoring-vertragingen succesvol geladen.")
+            print("Trader wachttijd succesvol geladen.")
         except FileNotFoundError:
             print(
                 f"Info: Configuratiebestand '{self.config_file}' niet gevonden. Standaard vertraging (0s) wordt gebruikt.")
@@ -51,9 +51,9 @@ class TraderCooldownManager:
                 f"Fout: Configuratiebestand '{self.config_file}' bevat ongeldige JSON. Standaard vertraging wordt gebruikt.")
         return delays
 
-    def get_monitor_delay_seconds(self, trader_name: str) -> int:
+    def get_config_wait_time(self, trader_name: str) -> int:
         """
-        Hernoemd voor duidelijkheid. Haalt de vertraging in seconden op
+        Hernoemd voor duidelijkheid. Haalt de wachttijd in seconden op
         voordat monitoring voor een trader start.
         """
         return self.trader_delays.get(trader_name, self.default_delay_seconds)

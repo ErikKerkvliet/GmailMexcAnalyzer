@@ -6,8 +6,9 @@ from email.message import EmailMessage
 
 class EmailNotifier:
     """
-    Verstuurt e-mailwaarschuwingen via de SMTP-server van Gmail.
+    Sends email alerts via Gmail's SMTP server.
     """
+
     def __init__(self, sender_email: str, app_password: str, recipient_email: str):
         self.sender_email = sender_email
         self.app_password = app_password
@@ -16,48 +17,48 @@ class EmailNotifier:
     def send_stop_loss_alert(self, crypto_pair: str, direction: str, entry_price: float, current_price: float,
                              pnl_percentage: float):
         """
-        Stelt een e-mail op en verstuurt deze met de details van de stop-loss waarschuwing.
+        Composes and sends an email with the details of the stop-loss alert.
         """
-        subject = f"🚨 Stop-Loss Waarschuwing: {crypto_pair} ({direction})"
+        subject = f"🚨 Stop-Loss Alert: {crypto_pair} ({direction})"
 
         body = f"""
-        Hallo,
+        Hello,
 
-        Dit is een automatische waarschuwing van je MEXC Trade Monitor.
-        Een van je openstaande posities heeft de ingestelde stop-loss drempel bereikt.
+        This is an automatic alert from your MEXC Trade Monitor.
+        One of your open positions has reached the configured stop-loss threshold.
 
-        Details van de positie:
+        Position Details:
         ---------------------------------
-        - Handelspaar: {crypto_pair}
-        - Richting:    {direction}
-        - Entry Prijs: ${entry_price:.4f}
-        - Huidig:      ${current_price:.4f}
-        - Verlies:     {pnl_percentage:.2f}%
+        - Trading Pair:  {crypto_pair}
+        - Direction:     {direction}
+        - Entry Price:   ${entry_price:.4f}
+        - Current Price: ${current_price:.4f}
+        - Loss:          {pnl_percentage:.2f}%
         ---------------------------------
 
-        Het is aanbevolen om deze positie te controleren op de MEXC exchange.
+        It is recommended to check this position on the MEXC exchange.
 
-        Met vriendelijke groet,
-        Je Python Trade Monitor
+        Best regards,
+        Your Python Trade Monitor
         """
 
-        # Maak het e-mailbericht object
+        # Create the email message object
         msg = EmailMessage()
         msg['Subject'] = subject
         msg['From'] = self.sender_email
         msg['To'] = self.recipient_email
         msg.set_content(body)
 
-        print(f"   -> Poging om stop-loss e-mail te versturen naar {self.recipient_email}...")
+        print(f"   -> Attempting to send stop-loss email to {self.recipient_email}...")
 
         try:
-            # Maak verbinding met de Gmail SMTP server
+            # Connect to the Gmail SMTP server
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                 server.login(self.sender_email, self.app_password)
                 server.send_message(msg)
-            print("   -> E-mailwaarschuwing succesvol verzonden!")
+            print("   -> Email alert sent successfully!")
         except smtplib.SMTPAuthenticationError:
             print(
-                "   -> FOUT BIJ VERSTUREN: Authenticatie mislukt. Controleer SENDER_EMAIL en SENDER_APP_PASSWORD in je .env-bestand.")
+                "   -> SENDING ERROR: Authentication failed. Check SENDER_EMAIL and SENDER_APP_PASSWORD in your .env file.")
         except Exception as e:
-            print(f"   -> FOUT BIJ VERSTUREN: Er is een onverwachte fout opgetreden: {e}")
+            print(f"   -> SENDING ERROR: An unexpected error occurred: {e}")

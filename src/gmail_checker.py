@@ -12,7 +12,7 @@ from googleapiclient.errors import HttpError
 
 class GmailChecker:
     """
-    Een klasse om te authenticeren met de Gmail API en e-mails op te halen.
+    A class to authenticate with the Gmail API and fetch emails.
     """
 
     def __init__(self, scopes: list):
@@ -22,8 +22,8 @@ class GmailChecker:
 
     def _authenticate(self) -> Credentials:
         """
-        Beheert de authenticatie van de gebruiker en retourneert geldige credentials.
-        Maakt of vernieuwt token.json indien nodig.
+        Manages user authentication and returns valid credentials.
+        Creates or refreshes token.json if necessary.
         """
         creds = None
         if os.path.exists('token.json'):
@@ -43,13 +43,13 @@ class GmailChecker:
 
     def get_new_emails(self, query: str) -> list:
         """
-        Haalt een lijst van nieuwe e-mails op gebaseerd op een query.
+        Fetches a list of new emails based on a query.
 
         Args:
-            query (str): De zoekopdracht voor de Gmail API (bv. 'is:unread').
+            query (str): The search query for the Gmail API (e.g., 'is:unread').
 
         Returns:
-            list: Een lijst van e-mail data dictionaries.
+            list: A list of email data dictionaries.
         """
         try:
             result = self.service.users().messages().list(userId='me', q=query).execute()
@@ -63,19 +63,19 @@ class GmailChecker:
                 msg_id = msg_ref['id']
                 full_msg = self.service.users().messages().get(userId='me', id=msg_id).execute()
 
-                # Parse de e-mail details
+                # Parse the email details
                 email_data = self._parse_email_details(full_msg)
                 emails.append(email_data)
 
             return emails
 
         except HttpError as error:
-            print(f'Er is een fout opgetreden bij het ophalen van e-mails: {error}')
+            print(f'An error occurred while fetching emails: {error}')
             return []
 
     @staticmethod
     def _get_email_body(payload: dict) -> str:
-        """Haalt de platte tekst body uit de e-mail payload."""
+        """Extracts the plain text body from the email payload."""
         body = ""
         if 'parts' in payload:
             for part in payload['parts']:
@@ -91,12 +91,12 @@ class GmailChecker:
         return body
 
     def _parse_email_details(self, message: dict) -> dict:
-        """Een helper-functie om de belangrijkste details uit een e-mail te halen."""
+        """A helper function to extract the main details from an email."""
         payload = message['payload']
         headers = payload['headers']
 
-        subject = "Geen onderwerp"
-        sender = "Onbekende afzender"
+        subject = "No subject"
+        sender = "Unknown sender"
         date_str = ""
         timestamp = 0
 
@@ -109,12 +109,12 @@ class GmailChecker:
             if name == 'date':
                 date_str = header['value']
 
-        # Converteer de datum-tekst naar een universele Unix-timestamp
+        # Convert the date string to a universal Unix timestamp
         if date_str:
             dt_object = parsedate_to_datetime(date_str)
             timestamp = int(dt_object.timestamp())
 
-        # Haal nu ook de body op
+        # Now also get the body
         body = self._get_email_body(payload)
 
         return {

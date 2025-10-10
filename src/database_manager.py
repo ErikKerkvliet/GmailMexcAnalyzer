@@ -5,17 +5,18 @@ import sqlite3
 
 class DatabaseManager:
     """
-    Beheert alle interacties met de SQLite-database voor de trades.
+    Manages all interactions with the SQLite database for trades.
     """
+
     def __init__(self, db_file: str):
         self.db_file = db_file
         self.conn = sqlite3.connect(db_file)
-        self.conn.row_factory = sqlite3.Row  # Voor dictionary-achtige resultaten
+        self.conn.row_factory = sqlite3.Row  # For dictionary-like results
         self.cursor = self.conn.cursor()
         self._setup_database()
 
     def _setup_database(self):
-        """Maakt de tabel aan als deze niet bestaat en voegt de mail_send kolom toe."""
+        """Creates the table if it doesn't exist and adds the mail_send column."""
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS trades (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, crypto_pair TEXT NOT NULL,
@@ -26,16 +27,16 @@ class DatabaseManager:
                 mail_send INTEGER NOT NULL DEFAULT 0
             )
         """)
-        # Voeg de kolom toe als deze niet bestaat voor achterwaartse compatibiliteit
+        # Add the column if it doesn't exist for backward compatibility
         try:
             self.cursor.execute("ALTER TABLE trades ADD COLUMN mail_send INTEGER NOT NULL DEFAULT 0")
         except sqlite3.OperationalError:
-            pass  # Kolom bestaat al
+            pass  # Column already exists
         self.conn.commit()
 
     def get_open_trades_details(self) -> list[dict]:
         """
-        Haalt een lijst van dictionaries op met alle details van openstaande trades.
+        Fetches a list of dictionaries with all details of open trades.
         """
         self.cursor.execute("""
             SELECT id, crypto_pair, direction, trader, entry_price, open_time, timestamp, mail_send
@@ -45,31 +46,31 @@ class DatabaseManager:
         return [dict(row) for row in results]
 
     def close_trade_manually(self, trade_id: int) -> bool:
-        """Zet de status van een specifieke trade op 'CLOSED' op basis van zijn ID."""
+        """Sets the status of a specific trade to 'CLOSED' based on its ID."""
         try:
             self.cursor.execute("UPDATE trades SET status = 'CLOSED' WHERE id = ?", (trade_id,))
             self.conn.commit()
-            # rowcount > 0 betekent dat de update succesvol was
+            # rowcount > 0 means the update was successful
             return self.cursor.rowcount > 0
         except sqlite3.Error as e:
-            print(f"Databasefout bij het sluiten van trade {trade_id}: {e}")
+            print(f"Database error while closing trade {trade_id}: {e}")
             return False
 
     def mark_email_as_sent(self, trade_id: int) -> bool:
-        """Markeert dat er een e-mail is verzonden voor een specifieke trade."""
+        """Marks that an email has been sent for a specific trade."""
         try:
             self.cursor.execute("UPDATE trades SET mail_send = 1 WHERE id = ?", (trade_id,))
             self.conn.commit()
             return self.cursor.rowcount > 0
         except sqlite3.Error as e:
-            print(f"Databasefout bij het markeren van e-mail voor trade {trade_id}: {e}")
+            print(f"Database error while marking email for trade {trade_id}: {e}")
             return False
 
     def get_connection(self) -> sqlite3.Connection:
-        """Geeft de actieve databaseverbinding terug voor gebruik door andere klassen."""
+        """Returns the active database connection for use by other classes."""
         return self.conn
 
     def close_connection(self):
-        """Sluit de databaseverbinding."""
+        """Closes the database connection."""
         if self.conn:
             self.conn.close()

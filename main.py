@@ -18,7 +18,7 @@ TRADER_CONFIG_FILE = "trader_config.json"
 
 
 def read_last_run_timestamp() -> int | None:
-    """Leest de Unix-timestamp van de laatste uitvoering uit het state-bestand."""
+    """Reads the Unix timestamp of the last execution from the state file."""
     try:
         with open(TIMESTAMP_FILE, 'r') as f:
             content = f.read().strip()
@@ -26,17 +26,19 @@ def read_last_run_timestamp() -> int | None:
     except (FileNotFoundError, ValueError):
         return None
 
+
 def write_current_timestamp():
-    """Schrijft de huidige Unix-timestamp naar het state-bestand."""
+    """Writes the current Unix timestamp to the state file."""
     current_timestamp = int(time.time())
     with open(TIMESTAMP_FILE, 'w') as f:
         f.write(str(current_timestamp))
-    # Print aan het begin van een nieuwe regel voor duidelijkheid
-    print(f"\nTimestamp {current_timestamp} opgeslagen voor de volgende run.")
+    # Print at the beginning of a new line for clarity
+    print(f"\nTimestamp {current_timestamp} saved for the next run.")
+
 
 def main():
     """
-    De hoofdfunctie van de applicatie.
+    The main function of the application.
     """
     env_path = Path('.') / '.env'
     load_dotenv(dotenv_path=env_path)
@@ -46,59 +48,59 @@ def main():
 
     db_manager = DatabaseManager(DB_FILE)
 
-    # Bouw de zoekopdracht dynamisch op (uw logica is behouden)
+    # Dynamically build the search query
     last_timestamp = read_last_run_timestamp()
     full_query = base_query
     if last_timestamp:
         full_query += f" after:{last_timestamp}"
-        print(f"Zoeken naar e-mails na timestamp: {last_timestamp}")
+        print(f"Searching for emails after timestamp: {last_timestamp}")
     else:
-        print("Geen vorige timestamp gevonden. Eerste run of state-bestand is nieuw.")
+        print("No previous timestamp found. First run or state file is new.")
 
-    print(f"Volledige zoekopdracht: '{full_query}'")
+    print(f"Full search query: '{full_query}'")
 
     checker = GmailChecker(scopes=scopes)
     new_emails = checker.get_new_emails(query=full_query)
 
-    # De timestamp wordt na de verwerking geschreven,
+    # The timestamp is written after processing
     write_current_timestamp()
 
     if not new_emails:
-        print("Geen nieuwe e-mails gevonden die aan de query voldoen.")
+        print("No new emails found matching the query.")
     else:
-        print(f"\n{len(new_emails)} ongelezen e-mail(s) gevonden. Verwerken van oud naar nieuw...")
+        print(f"\n{len(new_emails)} unread email(s) found. Processing from old to new...")
         for email in reversed(new_emails):
-            # Geef de databaseverbinding door vanuit de manager
+            # Pass the database connection from the manager
             analyzer = Analyze(email_data=email, db_connection=db_manager.get_connection())
             analyzer.process()
 
-    # --- Controle van openstaande posities ---
-    print("\n--- Controleren van openstaande posities ---")
+    # --- Checking open positions ---
+    print("\n--- Checking open positions ---")
 
-    # Lees e-mailinstellingen en maak een notifier object aan
+    # Read email settings and create a notifier object
     sender = os.getenv('SENDER_EMAIL')
     password = os.getenv('SENDER_APP_PASSWORD')
     recipient = os.getenv('RECIPIENT_EMAIL')
-    notifier = None  # Standaard geen notifier
+    notifier = None  # Default no notifier
 
     if sender and password and recipient:
         notifier = EmailNotifier(sender_email=sender, app_password=password, recipient_email=recipient)
     else:
         print(
-            "E-mailinstellingen (SENDER_EMAIL, etc.) niet volledig gevonden in .env. Waarschuwingen worden alleen in de console getoond.")
+            "Email settings (SENDER_EMAIL, etc.) not fully found in .env. Alerts will only be shown in the console.")
     try:
         stop_loss = float(os.getenv('STOPLOSS_PERCENTAGE', -100.0))
     except (ValueError, TypeError):
         stop_loss = -100.0
-        print("WAARSCHUWING: STOPLOSS_PERCENTAGE in .env is ongeldig.")
+        print("WARNING: STOPLOSS_PERCENTAGE in .env is invalid.")
 
     trader_config = TraderConfig(TRADER_CONFIG_FILE)
     open_trades = db_manager.get_open_trades_details()
 
     if not open_trades:
-        print("Geen openstaande posities gevonden in de database.")
+        print("No open positions found in the database.")
     else:
-        print(f"{len(open_trades)} openstaande positie(s) gevonden.")
+        print(f"{len(open_trades)} open position(s) found.")
         mexc_client = MexcApiClient()
         monitor = PositionMonitor(stop_loss_percentage=stop_loss, email_notifier=notifier, db_manager=db_manager)
         current_time = int(time.time())
@@ -107,15 +109,15 @@ def main():
             trader_name = trade['trader']
             trade_timestamp = trade['timestamp']
 
-            # Haal de monitoring-vertraging op voor deze trader
+            # Get the monitoring delay for this trader
             monitor_delay_seconds = trader_config.get_config_wait_time(trader_name)
 
-            # Controleer ALLEEN als de trade lang genoeg open staat.
+            # ONLY check if the trade has been open long enough.
             if current_time > (trade_timestamp + monitor_delay_seconds):
-                # De tijd is verstreken, dus we mogen de stop-loss controleren.
+                # The time has passed, so we can check the stop-loss.
                 elapsed_time = current_time - trade_timestamp
                 print(
-                    f"   -> Controle voor {trade['crypto_pair']} ({trader_name}) wordt uitgevoerd (open voor {elapsed_time // 60}m).")
+                    f"   -> Check for {trade['crypto_pair']} ({trader_name}) is being performed (open for {elapsed_time // 60}m).")
                 current_price = mexc_client.get_current_price(trade['crypto_pair'])
                 if current_price is not None:
                     monitor.check_position(
@@ -128,7 +130,7 @@ def main():
                     )
 
     db_manager.close_connection()
-    print("\nProces voltooid. Databaseverbinding gesloten.")
+    print("\nProcess completed. Database connection closed.")
 
 
 if __name__ == '__main__':

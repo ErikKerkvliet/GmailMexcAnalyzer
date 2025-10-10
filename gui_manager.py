@@ -11,19 +11,19 @@ class TradeManagerApp:
     def __init__(self, root):
         self.db_manager = DatabaseManager(DB_FILE)
         self.root = root
-        self.root.title("Trade Manager - Openstaande Posities")
-        self.root.geometry("950x450")
+        self.root.title("Trade Manager - Open Positions")
+        self.root.geometry("750x450")
 
         style = ttk.Style()
         style.configure("Treeview.Heading", font=("Helvetica", 10, "bold"))
-        # Stijl voor de statusmelding
+        # Style for the status message
         style.configure("Status.TLabel", foreground="red", font=("Helvetica", 12))
 
-        # Stijl voor afwisselende rij kleuren en kolom separators
+        # Style for alternating row colors and column separators
         style.configure("Treeview", rowheight=25)
         style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
 
-        # Voeg borders toe aan de cellen voor kolom separators
+        # Add borders to the cells for column separators
         style.configure("Treeview",
                         background="white",
                         fieldbackground="white",
@@ -31,48 +31,48 @@ class TradeManagerApp:
                         relief="solid")
 
         self.tree_colors = {
-            'even': '#FFFFFF',  # Wit voor even rijen
-            'odd': '#5f5f5f'  # Licht grijs voor oneven rijen
+            'even': '#FFFFFF',  # White for even rows
+            'odd': '#5f5f5f'  # Light gray for odd rows
         }
 
-        # --- Top Frame voor Labels ---
+        # --- Top Frame for Labels ---
         top_frame = ttk.Frame(root, padding=(10, 10, 10, 0))
         top_frame.pack(fill=tk.X)
 
-        title_label = ttk.Label(top_frame, text="Openstaande trades:", font=("Helvetica", 12))
+        title_label = ttk.Label(top_frame, text="Open trades:", font=("Helvetica", 12))
         title_label.pack(side=tk.LEFT)
 
-        # Een apart label voor de statusmelding
+        # A separate label for the status message
         self.status_label = ttk.Label(top_frame, text="", style="Status.TLabel")
         self.status_label.pack(side=tk.LEFT, padx=150)
 
-        # --- Frame voor de Tabel ---
+        # --- Frame for the Table ---
         table_frame = ttk.Frame(root, padding=(10, 0, 10, 10))
         table_frame.pack(fill=tk.BOTH, expand=True)
 
-        # De 'columns' tuple bevat alle data die we willen opslaan in een rij.
+        # The 'columns' tuple contains all the data we want to store in a row.
         self.columns = ('id', 'pair', 'direction', 'trader', 'entry_price', 'open_time')
-        # De 'displaycolumns' tuple bepaalt welke kolommen ZICHTBAAR zijn.
+        # The 'displaycolumns' tuple determines which columns are VISIBLE.
         display_columns = ('pair', 'direction', 'trader', 'entry_price', 'open_time')
 
         self.tree = ttk.Treeview(table_frame, columns=self.columns, displaycolumns=display_columns, show='headings',
                                  style="Treeview")
 
-        # Definieer de headers voor de ZICHTBARE kolommen
+        # Define the headers for the VISIBLE columns
         self.tree.heading('pair', text='Crypto Pair')
-        self.tree.heading('direction', text='Richting')
+        self.tree.heading('direction', text='Direction')
         self.tree.heading('trader', text='Trader')
-        self.tree.heading('entry_price', text='Entry Prijs')
-        self.tree.heading('open_time', text='Geopend Op')
+        self.tree.heading('entry_price', text='Entry Price')
+        self.tree.heading('open_time', text='Opened At')
 
-        # Definieer de kolombreedtes voor de ZICHTBARE kolommen
+        # Define the column widths for the VISIBLE columns
         self.tree.column('pair', width=120, anchor=tk.W)
         self.tree.column('direction', width=80, anchor=tk.W)
         self.tree.column('trader', width=120, anchor=tk.W)
-        self.tree.column('entry_price', width=100, anchor=tk.E)
-        self.tree.column('open_time', width=250, anchor=tk.W)
+        self.tree.column('entry_price', width=80, anchor=tk.E)
+        self.tree.column('open_time', width=150, anchor=tk.E)
 
-        # Configureer tags voor afwisselende rij kleuren
+        # Configure tags for alternating row colors
         self.tree.tag_configure('evenrow', background='#FFFFFF')
         self.tree.tag_configure('oddrow', background='#F0F0F0')
 
@@ -82,21 +82,21 @@ class TradeManagerApp:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.config(yscrollcommand=scrollbar.set)
 
-        # --- Frame voor de Knoppen ---
+        # --- Frame for the Buttons ---
         button_frame = ttk.Frame(root, padding="10")
         button_frame.pack(fill=tk.X)
 
-        close_button = ttk.Button(button_frame, text="Sluit Geselecteerde Trade", command=self.close_selected_trade)
+        close_button = ttk.Button(button_frame, text="Close Selected Trade", command=self.close_selected_trade)
         close_button.pack(side=tk.LEFT, padx=5)
 
-        refresh_button = ttk.Button(button_frame, text="Vernieuwen", command=self.populate_trades_list)
+        refresh_button = ttk.Button(button_frame, text="Refresh", command=self.populate_trades_list)
         refresh_button.pack(side=tk.LEFT, padx=5)
 
         self.populate_trades_list()
 
     def populate_trades_list(self):
-        """Haalt open trades op uit de DB en vult de Treeview-tabel."""
-        # Maak eerst de tabel leeg en wis de statusmelding
+        """Fetches open trades from the DB and populates the Treeview table."""
+        # First, clear the table and the status message
         self.status_label.config(text="")
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -104,51 +104,51 @@ class TradeManagerApp:
         open_trades = self.db_manager.get_open_trades_details()
 
         if not open_trades:
-            # Toon de melding in het statuslabel boven de tabel
-            self.status_label.config(text="Geen openstaande trades gevonden.")
+            # Show the message in the status label above the table
+            self.status_label.config(text="No open trades found.")
             return
 
         for index, trade in enumerate(open_trades):
-            # Voeg een visuele separator toe aan elke cel met een pipe symbool
             values_tuple = (
                 trade['id'],
                 f" {trade['crypto_pair']}",
                 f" {trade['direction']}",
                 f" {trade['trader']}",
                 f" ${trade['entry_price']:.4f}",
-                f" {trade['open_time']}"
+                f" {trade['open_time'][0:-11]} "
             )
-            # Wissel tussen even en oneven rij tags
+            # Alternate between even and odd row tags
             tag = 'evenrow' if index % 2 == 0 else 'oddrow'
             self.tree.insert('', 'end', values=values_tuple, tags=(tag,))
 
     def close_selected_trade(self):
-        """Sluit de trade die op dit moment in de tabel is geselecteerd."""
+        """Closes the trade that is currently selected in the table."""
         selected_item = self.tree.focus()
         if not selected_item:
-            messagebox.showwarning("Geen selectie", "Selecteer eerst een trade uit de tabel.")
+            messagebox.showwarning("No selection", "Please select a trade from the table first.")
             return
 
         item_data = self.tree.item(selected_item)
         values = item_data['values']
 
         if not values:
-            messagebox.showerror("Fout", "Kon de geselecteerde trade niet lezen.")
+            messagebox.showerror("Error", "Could not read the selected trade.")
             return
 
-        # De ID is nog steeds de eerste waarde in de 'values' tuple, ook al is hij verborgen.
+        # The ID is still the first value in the 'values' tuple, even though it's hidden.
         trade_id = values[0]
         trade_pair = values[1]
         trade_trader = values[3]
 
-        confirm = messagebox.askyesno("Bevestiging", f"Weet je zeker dat je de trade {trade_pair} van {trade_trader} wilt sluiten?")
+        confirm = messagebox.askyesno("Confirmation",
+                                      f"Are you sure you want to close the trade {trade_pair} from {trade_trader}?")
 
         if confirm:
             success = self.db_manager.close_trade_manually(trade_id)
             if success:
                 self.populate_trades_list()
             else:
-                messagebox.showerror("Databasefout", f"Kon trade {trade_id} niet sluiten.")
+                messagebox.showerror("Database Error", f"Could not close trade {trade_id}.")
 
 
 def main():

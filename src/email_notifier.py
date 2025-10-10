@@ -24,7 +24,7 @@ class EmailNotifier:
         body = f"""
         Hello,
 
-        This is an automatic alert from your MEXC Trade Monitor.
+        This is an automatic alert from your Trade Monitor.
         One of your open positions has reached the configured stop-loss threshold.
 
         Position Details:
@@ -36,7 +36,7 @@ class EmailNotifier:
         - Loss:          {pnl_percentage:.2f}%
         ---------------------------------
 
-        It is recommended to check this position on the MEXC exchange.
+        It is recommended to check this position on the exchange.
 
         Best regards,
         Your Python Trade Monitor

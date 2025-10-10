@@ -60,6 +60,9 @@ def main():
     checker = GmailChecker(scopes=scopes)
     new_emails = checker.get_new_emails(query=full_query)
 
+    # De timestamp wordt na de verwerking geschreven,
+    write_current_timestamp()
+
     if not new_emails:
         print("Geen nieuwe e-mails gevonden die aan de query voldoen.")
     else:
@@ -68,10 +71,6 @@ def main():
             # Geef de databaseverbinding door vanuit de manager
             analyzer = Analyze(email_data=email, db_connection=db_manager.get_connection())
             analyzer.process()
-
-    # De timestamp wordt na de verwerking geschreven,
-    # zodat gemiste e-mails bij een fout opnieuw worden geprobeerd.
-    write_current_timestamp()
 
     # --- Controle van openstaande posities ---
     print("\n--- Controleren van openstaande posities ---")

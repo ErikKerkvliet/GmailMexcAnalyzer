@@ -31,7 +31,7 @@ class EmailNotifier:
         - Handelspaar: {crypto_pair}
         - Richting:    {direction}
         - Entry Prijs: ${entry_price:.4f}
-        - Huidige Prijs: ${current_price:.4f}
+        - Huidig:      ${current_price:.4f}
         - Verlies:     {pnl_percentage:.2f}%
         ---------------------------------
 

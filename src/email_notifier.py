@@ -15,17 +15,22 @@ class EmailNotifier:
         self.recipient_email = recipient_email
 
     def send_stop_loss_alert(self, crypto_pair: str, direction: str, entry_price: float, current_price: float,
-                             pnl_percentage: float):
+                             pnl_percentage: float, alert_level: int):
         """
         Composes and sends an email with the details of the stop-loss alert.
         """
-        subject = f"🚨 Stop-Loss Alert: {crypto_pair} ({direction})"
+        if alert_level == 0:
+            subject = f"🚨 Stop-Loss Alert: {crypto_pair} ({direction})"
+            greeting = "This is an automatic alert from your Trade Monitor."
+        else:
+            subject = f"🚨 URGENT REMINDER ({alert_level}): Stop-Loss on {crypto_pair} ({direction})"
+            greeting = f"This is an urgent follow-up alert (Reminder #{alert_level})."
 
         body = f"""
         Hello,
 
-        This is an automatic alert from your Trade Monitor.
-        One of your open positions has reached the configured stop-loss threshold.
+        {greeting}
+        The following open position continues to exceed the configured stop-loss threshold.
 
         Position Details:
         ---------------------------------
@@ -36,7 +41,7 @@ class EmailNotifier:
         - Loss:          {pnl_percentage:.2f}%
         ---------------------------------
 
-        It is recommended to check this position on the exchange.
+        Immediate review of this position on the exchange is strongly recommended.
 
         Best regards,
         Your Python Trade Monitor

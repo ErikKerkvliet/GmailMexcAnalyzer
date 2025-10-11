@@ -100,7 +100,7 @@ def main():
     if not open_trades:
         print("No open positions found in the database.")
     else:
-        print(f"{len(open_trades)} open position(s) found.")
+        print(f"{len(open_trades)} open position(s) found. Checking against schedules...")
         mexc_client = MexcApiClient()
         monitor = PositionMonitor(stop_loss_percentage=stop_loss, email_notifier=notifier, db_manager=db_manager)
         current_time = int(time.time())
@@ -108,26 +108,53 @@ def main():
         for trade in open_trades:
             trader_name = trade['trader']
             trade_timestamp = trade['timestamp']
+            alerts_sent = trade['alerts_sent']
 
-            # Get the monitoring delay for this trader
-            monitor_delay_seconds = trader_config.get_config_wait_time(trader_name)
+            # Get the full alert schedule for this trader
+            schedule = trader_config.get_trader_schedule(trader_name)
+            initial_wait = schedule['initial']
+            reminder_intervals = schedule['reminders']
 
-            # ONLY check if the trade has been open long enough.
-            if current_time > (trade_timestamp + monitor_delay_seconds):
-                # The time has passed, so we can check the stop-loss.
+            # Determine if we have already sent all scheduled alerts
+            max_alerts = 1 + len(reminder_intervals)
+            if alerts_sent >= max_alerts:
+                print(
+                    f"   -> Skipping {trade['crypto_pair']} ({trader_name}): All {max_alerts} scheduled alerts have been sent.")
+                continue
+
+            # Calculate the total time that must pass before the *next* alert
+            if alerts_sent == 0:
+                # This is the first check
+                total_wait_seconds = initial_wait
+            else:
+                # This is a reminder check
+                # We sum the initial wait + all reminder intervals up to the previous alert
+                reminders_to_sum = reminder_intervals[:alerts_sent]
+                total_wait_seconds = initial_wait + sum(reminders_to_sum)
+
+            next_alert_time = trade_timestamp + total_wait_seconds
+
+            # Check if it's time to perform the check
+            if current_time >= next_alert_time:
                 elapsed_time = current_time - trade_timestamp
                 print(
-                    f"   -> Check for {trade['crypto_pair']} ({trader_name}) is being performed (open for {elapsed_time // 60}m).")
+                    f"   -> Checking {trade['crypto_pair']} ({trader_name}), open for {elapsed_time // 60}m. (Alert level: {alerts_sent})")
                 current_price = mexc_client.get_current_price(trade['crypto_pair'])
+
                 if current_price is not None:
+                    # The monitor will now check the P/L and send an email if the SL is hit
                     monitor.check_position(
                         trade_id=trade['id'],
                         crypto_pair=trade['crypto_pair'],
                         direction=trade['direction'],
                         entry_price=trade['entry_price'],
                         current_price=current_price,
-                        mail_send=trade['mail_send']
+                        alerts_sent=alerts_sent
                     )
+            else:
+                # It's not yet time to check this trade for its next alert
+                wait_remaining = next_alert_time - current_time
+                print(f"   -> Skipping {trade['crypto_pair']} ({trader_name}): Next check in {wait_remaining // 60}m.")
 
     db_manager.close_connection()
     print("\nProcess completed. Database connection closed.")

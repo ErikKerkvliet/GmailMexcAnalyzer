@@ -21,7 +21,7 @@ class PositionMonitor:
             print("Email alerts are activated.")
 
     def check_position(self, trade_id: int, crypto_pair: str, direction: str, entry_price: float, current_price: float,
-                       mail_send: int):
+                       alerts_sent: int):
         if entry_price == 0: return
 
         percentage_change = 0.0
@@ -33,10 +33,11 @@ class PositionMonitor:
         pnl_status = f"Profit: {percentage_change:+.2f}%" if percentage_change >= 0 else f"Loss: {percentage_change:.2f}%"
         print(f"   -> Status {crypto_pair}: Entry=${entry_price:.4f}, Current=${current_price:.4f} | {pnl_status}")
 
-        # Check if the stop-loss has been reached AND if no email has been sent yet.
-        if percentage_change <= self.stop_loss_percentage and mail_send == 0:
+        # The check to see IF an email should be sent is now in main.py.
+        # This method now just checks if the stop-loss is currently triggered.
+        if percentage_change <= self.stop_loss_percentage:
             print("🚨" * 20)
-            print(f"🚨 STOP-LOSS ALERT for {crypto_pair} ({direction})!")
+            print(f"🚨 STOP-LOSS TRIGGERED for {crypto_pair} ({direction})! Alert level: {alerts_sent}")
             print(
                 f"🚨 Loss of {percentage_change:.2f}% has reached the threshold of {self.stop_loss_percentage:.2f}%.")
             print("🚨" * 20)
@@ -45,10 +46,9 @@ class PositionMonitor:
             if self.notifier:
                 self.notifier.send_stop_loss_alert(
                     crypto_pair=crypto_pair, direction=direction, entry_price=entry_price,
-                    current_price=current_price, pnl_percentage=percentage_change
+                    current_price=current_price, pnl_percentage=percentage_change,
+                    alert_level=alerts_sent  # Pass the current alert level
                 )
-                # Mark the email as sent in the database
+                # Increment the alert count in the database
                 if self.db_manager:
-                    self.db_manager.mark_email_as_sent(trade_id)
-        elif mail_send == 1:
-            print(f"   -> Info: Stop-loss for {crypto_pair} has already been reached, email has already been sent.")
+                    self.db_manager.increment_alert_count(trade_id)

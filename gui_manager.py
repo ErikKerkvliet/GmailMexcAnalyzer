@@ -201,7 +201,7 @@ class TradeManagerApp:
             self.sort_direction = not self.sort_direction
         else:
             self.current_sort_column = col
-            self.sort_direction = False
+            self.sort_direction = True
 
         items = []
         for item_id in self.tree.get_children(''):

@@ -16,7 +16,7 @@ class DatabaseManager:
         self._setup_database()
 
     def _setup_database(self):
-        """Creates the table if it doesn't exist and adds the mail_send column."""
+        """Creates the table and adds columns for alerts if they don't exist."""
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS trades (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, crypto_pair TEXT NOT NULL,
@@ -24,14 +24,24 @@ class DatabaseManager:
                 direction TEXT NOT NULL CHECK(direction IN ('LONG', 'SHORT')),
                 status TEXT NOT NULL CHECK(status IN ('OPEN', 'CLOSED')),
                 timestamp INTEGER NOT NULL,
-                mail_send INTEGER NOT NULL DEFAULT 0
+                mail_send INTEGER NOT NULL DEFAULT 0,
+                alerts_sent INTEGER NOT NULL DEFAULT 0
             )
         """)
-        # Add the column if it doesn't exist for backward compatibility
+        # Add columns if they don't exist for backward compatibility
         try:
-            self.cursor.execute("ALTER TABLE trades ADD COLUMN mail_send INTEGER NOT NULL DEFAULT 0")
+            self.cursor.execute("ALTER TABLE trades ADD COLUMN alerts_sent INTEGER NOT NULL DEFAULT 0")
         except sqlite3.OperationalError:
             pass  # Column already exists
+        try:
+            # Check if 'mail_send' exists before trying to rename.
+            self.cursor.execute("PRAGMA table_info(trades)")
+            columns = [info[1] for info in self.cursor.fetchall()]
+            if 'mail_send' in columns and 'alerts_sent' not in columns:
+                # This part is for migration, but safer just to add and use the new one.
+                pass
+        except sqlite3.OperationalError:
+            pass
         self.conn.commit()
 
     def get_open_trades_details(self) -> list[dict]:
@@ -39,7 +49,7 @@ class DatabaseManager:
         Fetches a list of dictionaries with all details of open trades.
         """
         self.cursor.execute("""
-            SELECT id, crypto_pair, direction, trader, entry_price, open_time, timestamp, mail_send
+            SELECT id, crypto_pair, direction, trader, entry_price, open_time, timestamp, alerts_sent
             FROM trades WHERE status = 'OPEN' ORDER BY timestamp DESC
         """)
         results = self.cursor.fetchall()
@@ -56,14 +66,14 @@ class DatabaseManager:
             print(f"Database error while closing trade {trade_id}: {e}")
             return False
 
-    def mark_email_as_sent(self, trade_id: int) -> bool:
-        """Marks that an email has been sent for a specific trade."""
+    def increment_alert_count(self, trade_id: int) -> bool:
+        """Increments the alert counter for a specific trade."""
         try:
-            self.cursor.execute("UPDATE trades SET mail_send = 1 WHERE id = ?", (trade_id,))
+            self.cursor.execute("UPDATE trades SET alerts_sent = alerts_sent + 1 WHERE id = ?", (trade_id,))
             self.conn.commit()
             return self.cursor.rowcount > 0
         except sqlite3.Error as e:
-            print(f"Database error while marking email for trade {trade_id}: {e}")
+            print(f"Database error while incrementing alert count for trade {trade_id}: {e}")
             return False
 
     # Add this method to your DatabaseManager class in src/database_manager.py

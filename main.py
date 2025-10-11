@@ -88,12 +88,6 @@ def main():
     else:
         print(
             "Email settings (SENDER_EMAIL, etc.) not fully found in .env. Alerts will only be shown in the console.")
-    try:
-        stop_loss = float(os.getenv('STOPLOSS_PERCENTAGE', -100.0))
-    except (ValueError, TypeError):
-        stop_loss = -100.0
-        print("WARNING: STOPLOSS_PERCENTAGE in .env is invalid.")
-
     trader_config = TraderConfig(TRADER_CONFIG_FILE)
     open_trades = db_manager.get_open_trades_details()
 
@@ -102,7 +96,8 @@ def main():
     else:
         print(f"{len(open_trades)} open position(s) found. Checking against schedules...")
         mexc_client = MexcApiClient()
-        monitor = PositionMonitor(stop_loss_percentage=stop_loss, email_notifier=notifier, db_manager=db_manager)
+        # Initialize the monitor WITHOUT the global stop_loss
+        monitor = PositionMonitor(email_notifier=notifier, db_manager=db_manager)
         current_time = int(time.time())
 
         for trade in open_trades:
@@ -110,12 +105,16 @@ def main():
             trade_timestamp = trade['timestamp']
             alerts_sent = trade['alerts_sent']
 
-            # Get the full alert schedule for this trader
-            schedule = trader_config.get_trader_schedule(trader_name)
+            # Get the full configuration for this specific trader
+            config = trader_config.get_trader_config(trader_name)
+            schedule = config['schedule']
+            trader_stop_loss = config['stoploss']
+
             initial_wait = schedule['initial']
             reminder_intervals = schedule['reminders']
 
-            # Determine if we have already sent all scheduled alerts
+            # ... (logic for max_alerts and total_wait_seconds remains the same)
+
             max_alerts = 1 + len(reminder_intervals)
             if alerts_sent >= max_alerts:
                 print(
@@ -138,7 +137,7 @@ def main():
             if current_time >= next_alert_time:
                 elapsed_time = current_time - trade_timestamp
                 print(
-                    f"   -> Checking {trade['crypto_pair']} ({trader_name}), open for {elapsed_time // 60}m. (Alert level: {alerts_sent})")
+                    f"   -> Checking {trade['crypto_pair']} ({trader_name}), open for {elapsed_time // 60}m. (Alert level: {alerts_sent}, SL: {trader_stop_loss}%)")
                 current_price = mexc_client.get_current_price(trade['crypto_pair'])
 
                 if current_price is not None:
@@ -149,7 +148,8 @@ def main():
                         direction=trade['direction'],
                         entry_price=trade['entry_price'],
                         current_price=current_price,
-                        alerts_sent=alerts_sent
+                        alerts_sent=alerts_sent,
+                        stop_loss_percentage=trader_stop_loss  # Pass the specific stop-loss here
                     )
             else:
                 # It's not yet time to check this trade for its next alert

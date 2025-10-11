@@ -8,20 +8,17 @@ class PositionMonitor:
     """
     Monitors open positions and alerts if a stop-loss threshold is reached.
     """
-
-    def __init__(self, stop_loss_percentage: float, email_notifier: EmailNotifier | None = None,
+    def __init__(self, email_notifier: EmailNotifier | None = None,
                  db_manager: DatabaseManager | None = None):
-        if stop_loss_percentage > 0:
-            stop_loss_percentage = -stop_loss_percentage
-        self.stop_loss_percentage = stop_loss_percentage
+        # self.stop_loss_percentage is removed from here
         self.notifier = email_notifier
         self.db_manager = db_manager
-        print(f"Position Monitor initialized with stop-loss threshold {self.stop_loss_percentage}%.")
+        print("Position Monitor initialized.") # Updated print statement
         if self.notifier:
             print("Email alerts are activated.")
 
     def check_position(self, trade_id: int, crypto_pair: str, direction: str, entry_price: float, current_price: float,
-                       alerts_sent: int):
+                       alerts_sent: int, stop_loss_percentage: float):  # New parameter added
         if entry_price == 0: return
 
         percentage_change = 0.0
@@ -33,13 +30,12 @@ class PositionMonitor:
         pnl_status = f"Profit: {percentage_change:+.2f}%" if percentage_change >= 0 else f"Loss: {percentage_change:.2f}%"
         print(f"   -> Status {crypto_pair}: Entry=${entry_price:.4f}, Current=${current_price:.4f} | {pnl_status}")
 
-        # The check to see IF an email should be sent is now in main.py.
-        # This method now just checks if the stop-loss is currently triggered.
-        if percentage_change <= self.stop_loss_percentage:
+        # Use the passed-in stop_loss_percentage instead of self.stop_loss_percentage
+        if percentage_change <= stop_loss_percentage:
             print("🚨" * 20)
             print(f"🚨 STOP-LOSS TRIGGERED for {crypto_pair} ({direction})! Alert level: {alerts_sent}")
             print(
-                f"🚨 Loss of {percentage_change:.2f}% has reached the threshold of {self.stop_loss_percentage:.2f}%.")
+                f"🚨 Loss of {percentage_change:.2f}% has reached the threshold of {stop_loss_percentage:.2f}%.")  # Use the new variable here
             print("🚨" * 20)
 
             # Call the notifier if it exists
@@ -47,7 +43,7 @@ class PositionMonitor:
                 self.notifier.send_stop_loss_alert(
                     crypto_pair=crypto_pair, direction=direction, entry_price=entry_price,
                     current_price=current_price, pnl_percentage=percentage_change,
-                    alert_level=alerts_sent  # Pass the current alert level
+                    alert_level=alerts_sent
                 )
                 # Increment the alert count in the database
                 if self.db_manager:

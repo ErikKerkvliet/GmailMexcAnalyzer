@@ -6,13 +6,16 @@ import re
 
 class TraderConfig:
     """
-    Reads and manages the alert schedule configuration for each trader.
+    Reads and manages the alert schedule and stop-loss configuration for each trader.
     """
+    # This default is used if a trader is not in the JSON at all,
+    # or if a specific setting is missing for a trader.
+    DEFAULT_STOPLOSS = -10.0
+    DEFAULT_SCHEDULE = {'initial': 0, 'reminders': []}
 
     def __init__(self, config_file: str):
         self.config_file = config_file
-        self.default_schedule = {'initial': 0, 'reminders': []}
-        self.trader_schedules = self._load_config()
+        self.trader_configs = self._load_config()
 
     def _parse_duration(self, duration_str: str) -> int:
         """Converts a duration string (e.g., '20m', '1h') to seconds."""
@@ -27,8 +30,8 @@ class TraderConfig:
         return value
 
     def _load_config(self) -> dict:
-        """Loads the trader alert schedules from the JSON file."""
-        schedules = {}
+        """Loads the trader alert schedules and stop-loss from the JSON file."""
+        configs = {}
         try:
             with open(self.config_file, 'r') as f:
                 data = json.load(f)
@@ -43,19 +46,42 @@ class TraderConfig:
                     reminder_intervals_str = item.get('reminder_intervals', [])
                     reminder_intervals_sec = [self._parse_duration(d) for d in reminder_intervals_str]
 
-                    schedules[trader] = {
-                        'initial': initial_wait_sec,
-                        'reminders': reminder_intervals_sec
+                    # Get stop-loss, using None as a placeholder if not present
+                    stoploss = item.get('stoploss_percentage')
+
+                    configs[trader] = {
+                        'schedule': {
+                            'initial': initial_wait_sec,
+                            'reminders': reminder_intervals_sec
+                        },
+                        'stoploss': stoploss
                     }
-            print("Trader alert schedules loaded successfully.")
+            print("Trader configurations loaded successfully.")
         except FileNotFoundError:
-            print(f"Info: Config file '{self.config_file}' not found. No delays will be used.")
+            print(f"Info: Config file '{self.config_file}' not found. Default settings will be used.")
         except json.JSONDecodeError:
             print(f"Error: Config file '{self.config_file}' contains invalid JSON.")
-        return schedules
+        return configs
 
-    def get_trader_schedule(self, trader_name: str) -> dict:
+    def get_trader_config(self, trader_name: str) -> dict:
         """
-        Gets the full alert schedule (initial wait and reminders in seconds) for a trader.
+        Gets the full configuration (schedule and stop-loss) for a specific trader.
+        Applies defaults for any missing values.
         """
-        return self.trader_schedules.get(trader_name, self.default_schedule)
+        config = self.trader_configs.get(trader_name, {})
+
+        # Get schedule, fall back to default if not present
+        schedule = config.get('schedule', self.DEFAULT_SCHEDULE)
+
+        # Get stop-loss, fall back to default if not present or is None
+        stoploss = config.get('stoploss')
+        if stoploss is None:
+            stoploss = self.DEFAULT_STOPLOSS
+        # Ensure stop-loss is always negative
+        elif stoploss > 0:
+            stoploss = -stoploss
+
+        return {
+            'schedule': schedule,
+            'stoploss': stoploss
+        }

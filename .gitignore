@@ -7,3 +7,4 @@ orders
 order_lists
 order_rates
 *.json
+*.db

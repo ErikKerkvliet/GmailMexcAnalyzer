@@ -5,3 +5,6 @@ google-auth-oauthlib
 openai
 requests
 tkcalendar
+
+PyQt6
+matplotlib

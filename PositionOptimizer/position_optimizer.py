@@ -119,11 +119,13 @@ def run_and_print_portfolio_simulation(optimizer: PositionOptimizer, capital: fl
     print("=" * 70)
 
 
-def print_recommendations(recs: Dict, capital: float, cost: float):
+def print_recommendations(optimizer: PositionOptimizer , recs: Dict, capital: float, cost: float):
     """Prints the strategy recommendations found by the grid search."""
     print("\n" + "=" * 70 + "\nOPTIMIZER STRATEGY RECOMMENDATIONS (THEORETICAL)\n" + "=" * 70)
     print(
         "These strategies are based on average ROI. Use them as a starting point\nand test them with the portfolio simulator.\n")
+    orders = len(optimizer.orders)
+    print(f"  Start capital:      {capital:.2f}%")
     for name, result in recs.items():
         print(f"--- {name.upper()} STRATEGY ---")
         print(f"  Stop-Loss ROI:      {result.stop_loss_roi:.2f}%")
@@ -134,6 +136,7 @@ def print_recommendations(recs: Dict, capital: float, cost: float):
                     capital * 0.1)) * 100 if capital > 0 else 0  # Assume 10% capital per trade for estimation
         net_avg_roi = result.avg_roi - cost_impact_pct
         print(f"  Est. Avg Net ROI:   {net_avg_roi:+.2f}% per trade")
+        print(f"  Total final capital: ${capital * ((1 + net_avg_roi / 100) ** orders):,.2f} after {orders} trades")
         print("-" * 25)
 
 
@@ -168,7 +171,7 @@ def run_analysis(file_path: str, capital: float, cost: float, sl_roi: Optional[f
         print("Mode: Running grid search to find optimal strategies...")
         recommendations = optimizer.get_recommendations()
         if recommendations:
-            print_recommendations(recommendations, capital, cost)
+            print_recommendations(optimizer, recommendations, capital, cost)
         else:
             print("Could not generate recommendations.")
 

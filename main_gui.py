@@ -50,7 +50,7 @@ class MainApplication(tk.Tk):
         self.title("Trading Data Analysis Suite")
         self.geometry("1600x900")
 
-        self.project_root = os.path.dirname(os.path.abspath(__file__)) # This line is added
+        self.project_root = os.path.dirname(os.path.abspath(__file__))
 
         self.selected_file_name = None
         self.transformed_file_path = None
@@ -73,6 +73,9 @@ class MainApplication(tk.Tk):
         self._create_file_selection_section(left_panel)
         self._create_actions_section(left_panel)
         self._create_log_section(left_panel)
+
+        # Start the background color monitor
+        self._monitor_active = False
 
     def _create_download_section(self, parent):
         download_frame = ttk.LabelFrame(parent, text="0. Download New Orders (Optional)", padding="10")
@@ -143,6 +146,8 @@ class MainApplication(tk.Tk):
         self.update_idletasks()
 
     def clear_right_panel(self):
+        # Stop monitoring if we clear the panel
+        self._monitor_active = False
         for widget in self.right_panel.winfo_children():
             widget.destroy()
 
@@ -188,8 +193,78 @@ class MainApplication(tk.Tk):
                                                      main_app=self)
             self.log("Price Tracker loaded.")
             self.after(1000, self.check_for_optimizer_data)
+
+            # Start the color fix monitor
+            self._monitor_active = True
+            self.after(1500, self._monitor_pnl_colors)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load Price Tracker: {e}")
+
+    def _find_treeview(self, widget):
+        """Recursively finds a Treeview widget inside the given widget."""
+        if isinstance(widget, ttk.Treeview):
+            return widget
+        for child in widget.winfo_children():
+            res = self._find_treeview(child)
+            if res: return res
+        return None
+
+    def _monitor_pnl_colors(self):
+        """
+        Periodically scans the visible Price Tracker table to force negative P&L to red.
+        """
+        if not self._monitor_active:
+            return
+
+        try:
+            # Dynamically find the treeview widget in the right panel
+            tree = self._find_treeview(self.right_panel)
+
+            if tree:
+                # Configure the tag for red color
+                tree.tag_configure('negative_pnl', foreground='red')
+
+                # Find columns that might be P&L
+                columns = tree['columns']
+                pnl_index = -1
+
+                # Look for common P&L column names
+                for i, col_name in enumerate(columns):
+                    if any(x in col_name.lower() for x in ['p&l', 'pnl', 'profit']):
+                        pnl_index = i
+                        break
+
+                if pnl_index != -1:
+                    # Iterate over all rows
+                    for item_id in tree.get_children():
+                        values = tree.item(item_id, 'values')
+                        if len(values) > pnl_index:
+                            pnl_str = str(values[pnl_index])
+                            # Clean string to get float (remove currency symbols, %, commas)
+                            clean_val = pnl_str.replace('$', '').replace('€', '').replace(',', '').replace('USDT',
+                                                                                                           '').replace(
+                                '%', '').strip()
+
+                            try:
+                                val = float(clean_val)
+                                if val < 0:
+                                    # Add the red tag
+                                    tree.item(item_id, tags=('negative_pnl',))
+                                else:
+                                    # Ensure red tag is removed if it became positive
+                                    current_tags = list(tree.item(item_id, 'tags'))
+                                    if 'negative_pnl' in current_tags:
+                                        current_tags.remove('negative_pnl')
+                                        tree.item(item_id, tags=tuple(current_tags))
+                            except ValueError:
+                                pass  # Not a number, skip
+        except Exception as e:
+            # Silently fail to avoid spamming logs, just retry later
+            pass
+
+        # Re-run this check every 1 second
+        if self._monitor_active:
+            self.after(1000, self._monitor_pnl_colors)
 
     def run_optimizer(self):
         rate_dir = os.path.join(project_root, 'PositionOptimizer', 'order_rates')

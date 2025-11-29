@@ -6,5 +6,6 @@ last_run_timestamp.txt
 orders
 order_lists
 order_rates
+test
 *.json
 *.db

@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
             return
 
         tab = self.tab_widgets[uid]
-        tab.add_orders(orders, prices)
+        tab.add_orders(orders, prices, self.worker.kraken_open_prices)
 
         if orders:
             nickname = orders[0].get('traderNickName', str(uid))

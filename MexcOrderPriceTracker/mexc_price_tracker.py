@@ -511,7 +511,7 @@ class OrderTrackerGUI:
             if not os.path.exists(output_dir): os.makedirs(output_dir)
 
             # Use a distinct filename for cached exports
-            output_filename = f"{self.main_app.selected_file_name}_cached.json"
+            output_filename = f"{self.main_app.selected_file_name}.json"
             output_path = os.path.join(output_dir, output_filename)
 
             final_data_structure = {"total_orders": len(cached_orders_data), "orders": cached_orders_data}
